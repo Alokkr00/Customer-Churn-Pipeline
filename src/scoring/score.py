@@ -43,7 +43,9 @@ def load_scoring_model() -> Tuple[Pipeline, str]:
         logger.info(f"Loading production model from: {PROD_MODEL_PATH}")
         return joblib.load(PROD_MODEL_PATH), "production_v1"
     if CANDIDATE_MODEL_PATH.exists():
-        logger.warning(f"Production model not found. Using candidate model from: {CANDIDATE_MODEL_PATH}")
+        logger.warning(
+            f"Production model not found. Using candidate model from: {CANDIDATE_MODEL_PATH}"
+        )
         return joblib.load(CANDIDATE_MODEL_PATH), "candidate_v1"
     raise FileNotFoundError("No trained model found. Run 'make train' or 'make evaluate' first.")
 
@@ -122,7 +124,11 @@ def score_customers(
     probabilities = scoring_model.predict_proba(X)[:, 1]
 
     # Build output dataframe
-    customer_ids = df_clean[ID_COLUMN] if ID_COLUMN in df_clean.columns else [f"CUST-{i:05d}" for i in range(len(df_clean))]
+    customer_ids = (
+        df_clean[ID_COLUMN]
+        if ID_COLUMN in df_clean.columns
+        else [f"CUST-{i:05d}" for i in range(len(df_clean))]
+    )
 
     results = []
     now_utc = datetime.now(timezone.utc)

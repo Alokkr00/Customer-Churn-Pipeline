@@ -79,7 +79,9 @@ def compute_precision_at_k(y_true: np.ndarray, y_proba: np.ndarray, k_pct: float
     return precision_k
 
 
-def compute_metrics(y_true: np.ndarray, y_proba: np.ndarray, threshold: float = 0.5) -> Dict[str, float]:
+def compute_metrics(
+    y_true: np.ndarray, y_proba: np.ndarray, threshold: float = 0.5
+) -> Dict[str, float]:
     """Compute comprehensive classification metrics."""
     y_pred = (y_proba >= threshold).astype(int)
     roc_auc = float(roc_auc_score(y_true, y_proba))

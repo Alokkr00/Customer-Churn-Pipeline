@@ -232,15 +232,13 @@ def get_high_risk_customers(
     # Priority 1: Query PostgreSQL scoring schema
     try:
         engine = create_engine(get_db_url())
-        query = text(
-            """
+        query = text("""
             SELECT customer_id, churn_probability, risk_tier, top_reasons, scored_at
             FROM scoring.churn_scores
             WHERE churn_probability >= :thresh
             ORDER BY churn_probability DESC
             LIMIT :lim
-            """
-        )
+            """)
         with engine.connect() as conn:
             rows = conn.execute(query, {"thresh": threshold, "lim": limit}).fetchall()
             for r in rows:

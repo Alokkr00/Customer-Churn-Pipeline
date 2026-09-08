@@ -128,5 +128,7 @@ if __name__ == "__main__":
     summary = run_drift_analysis()
     print("\n--- Drift Analysis Summary ---")
     print(f"Dataset Drift Detected: {summary['drift_detected']}")
-    print(f"Drifted Features: {summary['drifted_features_count']} / {summary['total_features_evaluated']}")
+    print(
+        f"Drifted Features: {summary['drifted_features_count']} / {summary['total_features_evaluated']}"
+    )
     print(f"Drift Share: {summary['drift_share']:.2%}")

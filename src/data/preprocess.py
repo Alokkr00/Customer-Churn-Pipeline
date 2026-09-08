@@ -120,9 +120,12 @@ def preprocess_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Risk indices & bundles
     if "contract_type" in df_proc.columns:
-        df_proc["contract_risk_index"] = df_proc["contract_type"].map(
-            {"Month-to-month": 3, "One year": 2, "Two year": 1}
-        ).fillna(2).astype(int)
+        df_proc["contract_risk_index"] = (
+            df_proc["contract_type"]
+            .map({"Month-to-month": 3, "One year": 2, "Two year": 1})
+            .fillna(2)
+            .astype(int)
+        )
 
     if "payment_method" in df_proc.columns:
         df_proc["is_electronic_check_payment"] = (
@@ -148,7 +151,9 @@ def preprocess_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Derived customer metrics
     if "monthly_charges" in df_proc.columns and "total_charges" in df_proc.columns:
-        tenure_col = df_proc["tenure_months"] if "tenure_months" in df_proc.columns else df_proc["tenure"]
+        tenure_col = (
+            df_proc["tenure_months"] if "tenure_months" in df_proc.columns else df_proc["tenure"]
+        )
         expected_total = tenure_col * df_proc["monthly_charges"]
         df_proc["charge_ratio"] = np.where(
             expected_total > 0,

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Streamlit Customer Churn Prediction & Retention Hub.
 
 Provides interactive dashboards for retention specialists and business teams:
@@ -116,7 +117,9 @@ if page == "📊 Executive Overview":
     ]
     low_risk_df = df_scored[df_scored["churn_probability"] < 0.35]
 
-    monthly_rev_at_risk = high_risk_df["monthly_charges"].sum() if "monthly_charges" in high_risk_df else 0.0
+    monthly_rev_at_risk = (
+        high_risk_df["monthly_charges"].sum() if "monthly_charges" in high_risk_df else 0.0
+    )
     annual_rev_at_risk = monthly_rev_at_risk * 12
 
     # Top KPI Metrics
@@ -170,9 +173,7 @@ if page == "📊 Executive Overview":
 # -------------------------------------------------------------------------
 elif page == "🚨 High-Risk Retention List":
     st.title("🚨 High-Risk Customer Retention Workspace")
-    st.markdown(
-        "Filter and export customer cohorts requiring urgent retention interventions."
-    )
+    st.markdown("Filter and export customer cohorts requiring urgent retention interventions.")
 
     # Filter by probability slider
     filtered_df = df_scored[df_scored["churn_probability"] >= min_risk_slider].copy()
@@ -235,9 +236,7 @@ elif page == "🧪 'What-If' Retention Simulator":
         sim_contract = st.selectbox(
             "Contract Type", ["Month-to-month", "One year", "Two year"], index=0
         )
-        sim_internet = st.selectbox(
-            "Internet Service", ["Fiber optic", "DSL", "No"], index=0
-        )
+        sim_internet = st.selectbox("Internet Service", ["Fiber optic", "DSL", "No"], index=0)
         sim_payment = st.selectbox(
             "Payment Method",
             ["Electronic check", "Mailed check", "Bank transfer", "Credit card"],

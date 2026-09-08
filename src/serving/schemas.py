@@ -19,18 +19,26 @@ class CustomerInput(BaseModel):
     internet_service: str = Field(default="Fiber optic", description="DSL, Fiber optic, No")
     online_security: Optional[str] = Field(default="No", description="Yes, No, No internet service")
     online_backup: Optional[str] = Field(default="No", description="Yes, No, No internet service")
-    device_protection: Optional[str] = Field(default="No", description="Yes, No, No internet service")
+    device_protection: Optional[str] = Field(
+        default="No", description="Yes, No, No internet service"
+    )
     tech_support: Optional[str] = Field(default="No", description="Yes, No, No internet service")
     streaming_tv: Optional[str] = Field(default="No", description="Yes, No, No internet service")
-    streaming_movies: Optional[str] = Field(default="No", description="Yes, No, No internet service")
-    contract_type: str = Field(default="Month-to-month", description="Month-to-month, One year, Two year")
+    streaming_movies: Optional[str] = Field(
+        default="No", description="Yes, No, No internet service"
+    )
+    contract_type: str = Field(
+        default="Month-to-month", description="Month-to-month, One year, Two year"
+    )
     paperless_billing: Optional[str] = Field(default="Yes", description="Yes or No")
     payment_method: str = Field(
         default="Electronic check",
         description="Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic)",
     )
     monthly_charges: float = Field(default=79.50, ge=0.0, description="Monthly charges in USD")
-    total_charges: Optional[float] = Field(default=477.00, ge=0.0, description="Total charges to date in USD")
+    total_charges: Optional[float] = Field(
+        default=477.00, ge=0.0, description="Total charges to date in USD"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={

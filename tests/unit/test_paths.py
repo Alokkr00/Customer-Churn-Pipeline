@@ -27,7 +27,9 @@ def test_project_root_discovery():
     assert root.is_absolute()
     assert root.exists()
     # Should contain project markers
-    has_marker = any((root / m).exists() for m in ("pyproject.toml", "docker-compose.yml", "Makefile"))
+    has_marker = any(
+        (root / m).exists() for m in ("pyproject.toml", "docker-compose.yml", "Makefile")
+    )
     assert has_marker is True
 
 
