@@ -9,7 +9,7 @@ from typing import Tuple
 
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from src.data.ingest import get_db_url
 
@@ -28,9 +28,10 @@ def load_from_raw_db(db_url: str = None) -> pd.DataFrame:
     """Load raw ingested records from PostgreSQL raw.telco_customers."""
     url = db_url or get_db_url()
     engine = create_engine(url)
-    query = "SELECT * FROM raw.telco_customers"
+    query = text("SELECT * FROM raw.telco_customers")
     logger.info("Extracting records from raw.telco_customers...")
-    return pd.read_sql_query(query, con=engine)
+    with engine.connect() as conn:
+        return pd.read_sql_query(query, con=conn)
 
 
 def preprocess_features(df: pd.DataFrame) -> pd.DataFrame:

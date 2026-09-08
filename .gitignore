@@ -71,6 +71,7 @@ data/processed/*
 !data/processed/.gitkeep
 reports/*.html
 reports/*.json
+reports/*.csv
 
 # MinIO / Docker local data
 minio_data/

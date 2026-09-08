@@ -1,128 +1,166 @@
-# 🔄 Production Customer Churn Prediction & Retention Pipeline
+# 🔄 End-to-End Customer Churn Prediction & Retention MLOps Pipeline
 
 [![CI Checks](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions)
-[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
-[![dbt](https://img.shields.io/badge/dbt-1.7-orange.svg)](https://www.getdbt.com/)
-[![MLflow](https://img.shields.io/badge/MLflow-2.10-blue)](https://mlflow.org/)
-[![Docker Compose](https://img.shields.io/badge/docker--compose-v2-blue)](https://docs.docker.com/compose/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.31+-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io)
+[![dbt](https://img.shields.io/badge/dbt--core-1.7-FF694B.svg?logo=dbt&logoColor=white)](https://www.getdbt.com/)
+[![MLflow](https://img.shields.io/badge/MLflow-2.10-0194E2.svg?logo=mlflow&logoColor=white)](https://mlflow.org/)
+[![Apache Airflow](https://img.shields.io/badge/Airflow-2.8-017CEE.svg?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
+[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-v2-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-An end-to-end, production-grade Machine Learning and Data Engineering pipeline designed to predict customer churn, rank customer risk tiers, and automate retention decision-making.
+A production-grade, end-to-end Machine Learning Operations (**MLOps**) and Data Engineering system designed to predict customer churn, explain individual risk drivers, and automate proactive retention campaigns for recurring subscription and SaaS businesses.
 
 ---
 
-## 📌 1. Business Framing
+## 📑 Table of Contents
+- [Business Problem & ROI](#-business-problem--roi)
+- [System Architecture](#-system-architecture)
+- [Key Features](#-key-features)
+- [Tech Stack](#-tech-stack)
+- [Project Layout](#-project-layout)
+- [Quickstart Guide](#-quickstart-guide)
+- [REST API Reference (FastAPI)](#-rest-api-reference-fastapi)
+- [Interactive Retention Hub (Streamlit)](#-interactive-retention-hub-streamlit)
+- [Model Governance & Promotion Gate](#-model-governance--promotion-gate)
+- [Testing & Code Quality](#-testing--code-quality)
+- [Roadmap](#-roadmap)
 
-### The Problem
-Acquiring a new customer costs **5–7× more** than retaining an existing one. In recurring subscription businesses (telecom, SaaS, e-commerce), reactive customer support is ineffective because customers churn silently before reaching out.
+---
+
+## 💼 Business Problem & ROI
+
+### The Challenge
+In recurring subscription businesses (telecoms, SaaS, streaming services), customer churn directly erodes customer lifetime value (LTV). Acquiring a new customer costs **5–7× more** than retaining an existing one. Reactive retention strategies (calling customers *after* they cancel) fail because churn signals develop weeks in advance.
 
 ### The Solution
-An automated, production-style MLOps pipeline that:
-1. Ingests customer touchpoints and billing events daily into PostgreSQL.
-2. Builds clean, auditable dimensional models and feature marts via **dbt**.
-3. Trains baseline and gradient boosted models (LightGBM) logged to **MLflow**.
-4. Enforces strict **automated model promotion gates** (`AUC improvement >= +0.01` and `drift score <= threshold`).
-5. Generates high-risk lists with actionable churn risk probability scores.
-6. Operates under full **CI/CD** automation with automated linting, schema validation, and unit tests.
+An automated, closed-loop MLOps pipeline that:
+1. **Identifies Vulnerability Early**: Scans customer activity and contract patterns daily to score churn probability.
+2. **Diagnoses Why**: Isolates top individual risk drivers (e.g. month-to-month contracts, missing tech support, high recurring charges) for transparent, explainable AI.
+3. **Automates Actionable Interventions**: Maps risk factors directly to prioritized retention campaigns (e.g. 15% discount for 12-month lock-in, complimentary tech support).
+4. **Protects Production Quality**: Enforces strict automated promotion gates ($\Delta\text{AUC} \ge +0.01$ and Population Stability Index $\le 0.10$) before any model reaches serving.
 
 ### Business & ML Success Metrics
-* **Model AUC / PR-AUC**: Target ROC-AUC $\ge 0.84$.
-* **Precision@20%**: Measures the churn capture rate among the top quintile highest-risk customers flagged for proactive outreach.
-* **Pipeline SLA & Latency**: Full batch scoring run completed within schedule window.
-* **Data & Prediction Drift**: Monitored via Population Stability Index (PSI) and Kolmogorov-Smirnov statistical tests.
+- **Target ROC-AUC**: $\ge 0.84$ on unseen holdout sets.
+- **Precision@20%**: Measures the churn concentration in the top quintile highest-risk customers flagged for proactive outreach.
+- **Revenue at Risk Protected**: Identifies high-risk customer accounts to prioritize high-touch retention campaigns.
+- **Prediction Latency**: Sub-30ms real-time inference via FastAPI.
 
 ---
 
-## 🏗️ 2. Architecture Diagram
+## 🏗️ System Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Data Layer
-        A[IBM Telco Dataset] -->|ingest.py| B[(PostgreSQL: raw.telco_customers)]
-        B -->|dbt run| C[dbt Staging: stg_customers]
-        C -->|dbt run| D[dbt Intermediate: int_customer_features]
-        D -->|dbt run| E[(dbt Marts: mart_churn_features)]
+    subgraph Ingestion & Transformation ["Data Layer (PostgreSQL & dbt)"]
+        A[IBM Telco Raw Dataset] -->|ingest.py| B[(raw.telco_customers)]
+        B -->|dbt run| C[stg_customers\nCleaned & Typecast]
+        C -->|dbt run| D[int_customer_features\nTenure Cohorts & Service Bundles]
+        D -->|dbt run| E[(marts.mart_churn_features\nProduction Feature Mart)]
     end
 
-    subgraph Feature & Training Layer
-        E -->|extract features| F[Feature Engineering Pipeline]
+    subgraph Training & Governance ["ML & Experiment Tracking (MLflow & MinIO)"]
+        E --> F[Feature Engineering Pipeline\nColumnTransformer & OneHotEncoder]
         F --> G[Baseline: Logistic Regression]
-        F --> H[Champion: LightGBM]
-        G -->|metrics & artifacts| I[MLflow Tracking Server]
-        H -->|metrics & artifacts| I
+        F --> H[Champion: LightGBM Classifier]
+        G -->|Metrics & Artifacts| I[MLflow Tracking Server]
+        H -->|Metrics & Artifacts| I
+        I --> J{evaluate.py\nPromotion Gate}
+        J -->|Candidate AUC > Prod + 0.01\n& PSI Drift < 0.10| K[(Production Model Cache\nMinIO / models/)]
+        J -->|Failed Gate| L[Keep Current Champion]
     end
 
-    subgraph Quality Gates & Promotion
-        I --> J{evaluate.py Gate}
-        J -->|Candidate AUC > Prod + 0.01\n& Drift PSI < 0.10| K[Promote to Production]
-        J -->|Failed Gate| L[Retain Existing Production Model]
-        K --> M[(MinIO S3 Artifact Store)]
+    subgraph Scoring & Orchestration ["Batch Scoring (Apache Airflow 2.8)"]
+        K --> M[Airflow DAG: daily_scoring]
+        M --> N[score.py Batch Engine]
+        N --> O[(scoring.churn_scores)]
+        N --> P[reports/high_risk_customers.csv]
     end
 
-    subgraph Monitoring & CI/CD
-        E --> N[Evidently AI Drift Report]
-        O[GitHub Actions] -->|ruff + pytest + dbt parse| P[CI Checks Passed]
+    subgraph Serving & UI ["Serving Layer (FastAPI & Streamlit)"]
+        K --> Q[FastAPI Serving Service\n/predict & /high-risk]
+        O --> R[Streamlit Retention Hub\nDashboard & What-If Simulator]
+        P --> R
+    end
+
+    subgraph Monitoring ["Monitoring (Evidently AI)"]
+        E --> S[drift.py\nKS-Tests & PSI Drift Report]
+        S --> T[reports/data_drift_report.html]
     end
 ```
 
 ---
 
-## 🛠️ 3. Tech Stack
+## 🌟 Key Features
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Local Infrastructure** | Docker Compose | One-command spinup of Postgres, Airflow, MLflow, MinIO |
-| **Data Store** | PostgreSQL 15 | Relational data warehouse, raw storage & feature mart |
-| **Data Transformation** | dbt-core + dbt-postgres | Version-controlled, testable SQL transformations |
-| **ML Training & Pipelines** | Scikit-learn, LightGBM | Feature pipelines, baseline & champion gradient boosting |
-| **Experiment Tracking** | MLflow | Model artifact logging, metrics tracking, model registry |
-| **Artifact Storage** | MinIO | S3-compatible local object storage for MLflow artifacts |
-| **Monitoring** | Evidently AI / Scipy | Automated feature drift and prediction PSI calculations |
-| **CI / CD** | GitHub Actions | Pull Request linting, unit testing, and dbt validation |
+* **Dynamic Platform-Agnostic Directory Resolution**: Custom path engine (`src/utils/paths.py`) that auto-discovers repository root and works seamlessly across Windows, macOS, Linux, Docker, and Airflow worker environments.
+* **Modular dbt Models**: Staging, intermediate, and marts layers with unit schema constraints (`unique`, `not_null`, `accepted_values`).
+* **Automated Production Quality Gate**: Replaces manual deployments with code-enforced promotion criteria based on both performance gain and population drift.
+* **Explainable Risk Diagnostics**: Provides human-readable churn risk reasons per customer for transparent customer support action.
+* **What-If Retention Strategy Simulator**: Interactive Streamlit simulator allowing retention teams to test how plan adjustments (e.g. extending contract duration or bundling tech support) lower a customer's churn risk.
+* **Full CI/CD Pipeline**: GitHub Actions running code formatting (Ruff/Black), unit test verification, and dbt compile checks on every pull request.
 
 ---
 
-## 📂 4. Project Layout
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Local Infrastructure** | Docker Compose | 1-command spinup of PostgreSQL 15, MinIO, MLflow, and Apache Airflow |
+| **Data Storage** | PostgreSQL 15 | Relational data warehouse, raw storage, feature mart, and churn scores |
+| **Data Transformation** | dbt-core + dbt-postgres | SQL transformations, schema testing, and lineage tracking |
+| **ML Modeling** | LightGBM, Scikit-learn | Gradient boosted trees and benchmark linear models |
+| **Experiment Tracking** | MLflow + MinIO | Run parameters, metrics, artifact logging, and model registry |
+| **Orchestration** | Apache Airflow 2.8 | Scheduled daily scoring pipeline and risk volume alerts |
+| **Real-Time Serving** | FastAPI + Uvicorn | High-performance REST endpoints with Pydantic validation |
+| **Retention UI** | Streamlit | Executive KPI dashboard, risk cohort table, and retention simulator |
+| **Data Quality & Drift** | Evidently AI + Scipy | Kolmogorov-Smirnov tests and Population Stability Index (PSI) |
+| **CI / CD** | GitHub Actions | Automated pull request testing, linting, and dbt validation |
+
+---
+
+## 📂 Project Layout
 
 ```text
 customer-churn-pipeline/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                 # PR & push validation (ruff, black, pytest, dbt parse)
-├── airflow/                       # Airflow DAGs and plugins
-│   ├── dags/
-│   ├── logs/
-│   └── plugins/
-├── dbt/                           # dbt transformation models
+├── airflow/
+│   └── dags/
+│       └── daily_scoring.py       # Airflow DAG for daily 06:00 AM batch scoring
+├── dbt/
 │   ├── models/
-│   │   ├── staging/
-│   │   │   ├── stg_customers.sql
-│   │   │   └── schema.yml
-│   │   ├── intermediate/
-│   │   │   ├── int_customer_features.sql
-│   │   │   └── schema.yml
-│   │   └── marts/
-│   │       ├── mart_churn_features.sql
-│   │       └── schema.yml
+│   │   ├── staging/               # stg_customers.sql + schema.yml
+│   │   ├── intermediate/          # int_customer_features.sql + schema.yml
+│   │   └── marts/                 # mart_churn_features.sql + schema.yml
 │   ├── dbt_project.yml
 │   └── profiles.yml
 ├── scripts/
-│   └── init_db.sql                # Postgres initialization (databases, schemas, tables)
+│   └── init_db.sql                # PostgreSQL init for raw, marts, and scoring schemas
 ├── src/
 │   ├── data/
-│   │   ├── ingest.py              # Ingest dataset to raw.telco_customers
+│   │   ├── ingest.py              # Raw ingestion to raw.telco_customers
 │   │   └── preprocess.py          # Data cleaning and staging
 │   ├── features/
 │   │   └── feature_engineering.py # Scikit-learn ColumnTransformer pipeline
 │   ├── training/
-│   │   ├── train.py               # Train LogReg + LightGBM, log to MLflow
-│   │   └── evaluate.py            # Model promotion gate (AUC delta + drift)
-│   └── monitoring/
-│       └── drift.py               # Evidently & statistical drift reports
+│   │   ├── train.py               # LogReg + LightGBM training with MLflow tracking
+│   │   └── evaluate.py            # Automated promotion gate (AUC delta + drift)
+│   ├── scoring/
+│   │   └── score.py               # Batch scoring engine & top driver diagnostics
+│   ├── serving/
+│   │   ├── main.py                # FastAPI real-time REST API
+│   │   └── schemas.py             # Pydantic v2 schemas
+│   ├── monitoring/
+│   │   └── drift.py               # Evidently & statistical drift monitoring
+│   └── utils/
+│       └── paths.py               # Dynamic platform-agnostic directory resolution
+├── streamlit_app/
+│   └── app.py                     # Streamlit Retention Dashboard & Simulator
 ├── tests/
-│   ├── unit/
-│   │   ├── test_features.py       # Preprocessor and feature tests
-│   │   └── test_evaluate.py       # Metrics, PSI, and promotion logic tests
+│   └── unit/                      # 20 unit tests covering all components
 ├── docker-compose.yml             # Postgres, MinIO, MLflow, Airflow
 ├── Makefile                       # Developer shortcuts
 ├── requirements.txt               # Pinned dependencies
@@ -132,103 +170,178 @@ customer-churn-pipeline/
 
 ---
 
-## 🚀 5. Quickstart Guide
+## 🚀 Quickstart Guide
 
 ### Prerequisites
-- Python 3.10 or 3.11
+- Python 3.10, 3.11, or 3.12
 - Docker Desktop installed and running
-- `make` (optional, or run commands directly)
+- Git
 
-### Step 1: Clone and Configure Environment
+### 1. Clone & Setup Environment
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/customer-churn-pipeline.git
-cd customer-churn-pipeline
-
-# Copy environment variables
-cp .env.example .env
+git clone https://github.com/Alokkr00/Customer-Churn-Pipeline.git
+cd Customer-Churn-Pipeline
 
 # Create and activate Python virtual environment
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install dependencies
+# Install all dependencies
 pip install -r requirements.txt
 pip install -e .
 ```
 
-### Step 2: Start Local Infrastructure
-Start PostgreSQL, MinIO, MLflow, and Airflow via Docker Compose:
+### 2. Start Local Infrastructure
 ```bash
 make up
 # Or: docker compose up -d
 ```
+Access infrastructure dashboards:
+- **MLflow UI**: [http://localhost:5000](http://localhost:5000)
+- **MinIO Console**: [http://localhost:9001](http://localhost:9001) (`minioadmin` / `minioadmin`)
+- **Airflow Webserver**: [http://localhost:8080](http://localhost:8080) (`admin` / `admin`)
+- **PostgreSQL**: `localhost:5432` (`churn_db`, user: `churn_user`)
 
-Verify running services:
-* **PostgreSQL**: `localhost:5432` (`churn_db`, user: `churn_user`)
-* **MLflow UI**: `http://localhost:5000`
-* **MinIO Console**: `http://localhost:9001` (user: `minioadmin`, pass: `minioadmin`)
-* **Airflow Webserver**: `http://localhost:8080` (user: `admin`, pass: `admin`)
-
-### Step 3: Run Ingestion and dbt Transformations
+### 3. Ingest Data & Run dbt Transformations
 ```bash
-# Ingest raw dataset into raw.telco_customers
-make ingest
-
-# Run dbt transformations (staging -> intermediate -> marts)
-make dbt-run
-
-# Run dbt data tests
-make dbt-test
+make ingest     # Ingest raw dataset into raw.telco_customers
+make dbt-run    # Transform data through staging -> intermediate -> marts
+make dbt-test   # Run dbt data tests
 ```
 
-### Step 4: Train Models & Log to MLflow
+### 4. Train Models & Promote to Production
 ```bash
-make train
+make train      # Train Logistic Regression & LightGBM; log to MLflow
+make evaluate   # Evaluate promotion gate (ΔAUC >= 0.01 & PSI <= 0.10)
 ```
-This trains:
-- Baseline: **Logistic Regression**
-- Champion Candidate: **LightGBM Classifier**
 
-Metrics (ROC-AUC, PR-AUC, F1, Precision@20%) and model pipelines are logged directly to the local MLflow server at `http://localhost:5000`.
-
-### Step 5: Evaluate Quality Gate and Promote Model
+### 5. Run Batch Scoring
 ```bash
-make evaluate
+make score      # Score customers, write to DB, and export high_risk_customers.csv
 ```
-Enforces the **Production Quality Gate**:
-$$\Delta \text{AUC} \ge 0.01 \quad \text{AND} \quad \text{PSI Drift} \le 0.10$$
-If candidate qualifies, it is automatically cached and promoted to Production.
 
-### Step 6: Generate Data Drift Report
+### 6. Start FastAPI Serving API
 ```bash
-make drift
+make serve
+# Swagger documentation available at: http://localhost:8000/docs
 ```
-Generates an interactive HTML drift report in `reports/data_drift_report.html` and summary metrics in `reports/drift_summary.json`.
+
+### 7. Launch Streamlit Retention Hub
+```bash
+make dashboard
+# Dashboard available at: http://localhost:8501
+```
 
 ---
 
-## 🧪 6. Testing & Code Quality
+## 📡 REST API Reference (FastAPI)
+
+When running `make serve`, the API documentation is interactively accessible at `http://localhost:8000/docs`.
+
+### Key Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Service health and model readiness probe |
+| `GET` | `/model-info` | Active production model metadata, parameters, and version |
+| `POST` | `/predict` | Real-time churn prediction for a single customer with risk drivers |
+| `POST` | `/predict-batch` | High-throughput batch prediction for a customer list |
+| `GET` | `/high-risk` | Query high-risk customer cohort (`?threshold=0.65&limit=100`) |
+
+### Example: Single Customer Prediction
+```bash
+curl -X POST "http://localhost:8000/predict" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "customer_id": "CUST-9821-HIGH",
+       "tenure_months": 3,
+       "contract_type": "Month-to-month",
+       "internet_service": "Fiber optic",
+       "online_security": "No",
+       "tech_support": "No",
+       "payment_method": "Electronic check",
+       "monthly_charges": 89.20
+     }'
+```
+
+**Response**:
+```json
+{
+  "customer_id": "CUST-9821-HIGH",
+  "churn_probability": 0.8142,
+  "churn_prediction": 1,
+  "risk_tier": "High",
+  "top_risk_drivers": [
+    "Month-to-month contract (low lock-in)",
+    "New customer in high-vulnerability first year",
+    "Electronic check payment (higher historic default & churn)"
+  ],
+  "recommended_retention_action": "Offer 15% discount for 1-year contract lock-in.",
+  "model_version": "production_v1",
+  "latency_ms": 14.82
+}
+```
+
+---
+
+## 🎯 Interactive Retention Hub (Streamlit)
+
+Run `make dashboard` to launch the interactive retention portal:
+1. **Executive Overview**: Real-time KPI summary tracking total accounts, high-risk churn rate, and monthly/annual revenue at risk.
+2. **High-Risk Retention Workspace**: Searchable, filterable list of customers sorted by churn probability with 1-click CSV export for email or outreach campaign tooling.
+3. **"What-If" Customer Simulator**: Real-time experimentation sandbox allowing retention specialists to test adjustments to customer contract duration, billing methods, and add-on services to see predicted churn risk drop live.
+4. **Model Health & Drift**: Displays active model hyperparameters and checks for data drift via Kolmogorov-Smirnov statistical tests.
+
+---
+
+## 🛡️ Model Governance & Promotion Gate
+
+To prevent degraded or drifting models from reaching production, `src/training/evaluate.py` enforces a two-factor quality gate:
+
+$$\Delta\text{AUC} = \text{AUC}_{\text{candidate}} - \text{AUC}_{\text{production}} \ge 0.01$$
+
+$$\text{PSI}(\text{Dist}_{\text{production}}, \text{Dist}_{\text{candidate}}) \le 0.10$$
+
+```python
+if (candidate_auc >= production_auc + 0.01) and (drift_psi_score <= 0.10):
+    # Promote to Production in MLflow Model Registry and cache locally
+    promote_model(candidate)
+else:
+    # Reject candidate and preserve active champion
+    retain_production_model()
+```
+
+---
+
+## 🧪 Testing & Code Quality
 
 Run tests and linters locally before submitting pull requests:
 
 ```bash
-# Run unit tests with coverage
+# Run all 20 unit tests with coverage
 make test
 
-# Run code linter
+# Check code linting with Ruff
 make lint
 
 # Auto-format codebase
 make format
 ```
 
+All 20 unit tests verify:
+- Feature preprocessing and ColumnTransformer pipeline encoding.
+- Dynamic project root discovery and environment variable overrides.
+- Precision@K ranking logic and Population Stability Index (PSI).
+- Automated model promotion gate acceptance and rejection paths.
+- Batch customer scoring and top risk driver explanations.
+- FastAPI endpoints (`/health`, `/model-info`, `/predict`, `/predict-batch`, `/high-risk`).
+
 ---
 
-## 🗺️ 7. Project Roadmap
+## 🗺️ Roadmap
 
 - [x] **Phase 1: Foundation** – Docker Compose (Postgres, MinIO, MLflow, Airflow), raw ingestion, dbt models, CI workflow.
 - [x] **Phase 2: Features & Training** – Feature engineering pipeline, LightGBM training, MLflow tracking, automated promotion gate, drift checks.
-- [ ] **Phase 3: Scoring & Serving** – Daily batch Airflow DAG, FastAPI real-time/batch prediction endpoints, interactive Streamlit retention dashboard.
-- [ ] **Phase 4: Production Practices** – Full CD promotion workflows, Slack/email alerts on high-risk spikes, containerized serving.
-- [ ] **Phase 5: Polish & Cloud** – Terraform IaC modules, cloud deployment recipes (AWS ECS / GCP Cloud Run).
+- [x] **Phase 3: Scoring & Serving** – Daily batch Airflow DAG, FastAPI real-time/batch prediction endpoints, interactive Streamlit retention dashboard.
+- [ ] **Phase 4: Production Practices** – Automated GitHub Actions training trigger, Slack/email alerts on high-risk customer spikes, containerized serving.
+- [ ] **Phase 5: Cloud Deployment** – Terraform IaC modules for AWS (ECS + RDS) or GCP (Cloud Run + Cloud SQL).

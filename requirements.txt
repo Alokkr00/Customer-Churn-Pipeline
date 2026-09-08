@@ -20,10 +20,14 @@ dbt-postgres==1.7.8
 # Data Quality & Drift
 evidently==0.4.15
 
-# API & Schemas (Phase 2/3 prep)
-pydantic==2.6.1
-pydantic-settings==2.1.0
-requests==2.31.0
+# Serving & Dashboard (Phase 3)
+fastapi>=0.109.0
+uvicorn>=0.27.0
+streamlit>=1.31.0
+httpx>=0.26.0
+pydantic>=2.6.1
+pydantic-settings>=2.1.0
+requests>=2.31.0
 
 # Testing & Linting
 pytest==8.0.0

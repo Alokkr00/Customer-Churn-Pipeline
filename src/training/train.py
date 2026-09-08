@@ -23,7 +23,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.pipeline import Pipeline
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 from src.data.ingest import clean_raw_data, fetch_dataset, get_db_url
 from src.data.preprocess import preprocess_features, train_test_split_dataset
@@ -46,9 +46,10 @@ def load_training_data(db_url: str = None) -> pd.DataFrame:
     url = db_url or get_db_url()
     try:
         engine = create_engine(url)
-        query = "SELECT * FROM marts.mart_churn_features"
+        query = text("SELECT * FROM marts.mart_churn_features")
         logger.info("Attempting to load features from marts.mart_churn_features in PostgreSQL...")
-        df = pd.read_sql_query(query, con=engine)
+        with engine.connect() as conn:
+            df = pd.read_sql_query(query, con=conn)
         if len(df) > 0:
             logger.info(f"Successfully loaded {len(df)} records from marts table.")
             return df

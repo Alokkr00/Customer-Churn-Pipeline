@@ -1,4 +1,4 @@
-.PHONY: help up down restart ps logs test lint format ingest dbt-run dbt-test train evaluate drift clean
+.PHONY: help up down restart ps logs test lint format ingest dbt-run dbt-test train evaluate drift score serve dashboard clean
 
 help:
 	@echo "Available commands:"
@@ -11,6 +11,9 @@ help:
 	@echo "  make dbt-test    - Run dbt data tests"
 	@echo "  make train       - Train churn models and log runs to MLflow"
 	@echo "  make evaluate    - Compare candidate model against production and promote"
+	@echo "  make score       - Run daily batch scoring on active customers"
+	@echo "  make serve       - Start FastAPI real-time model serving endpoint"
+	@echo "  make dashboard   - Launch Streamlit interactive retention dashboard"
 	@echo "  make drift       - Generate Evidently data drift report"
 	@echo "  make test        - Run unit tests with pytest"
 	@echo "  make lint        - Run ruff linter"
@@ -46,6 +49,15 @@ train:
 
 evaluate:
 	python -m src.training.evaluate
+
+score:
+	python -m src.scoring.score
+
+serve:
+	uvicorn src.serving.main:app --host 0.0.0.0 --port 8000 --reload
+
+dashboard:
+	streamlit run streamlit_app/app.py
 
 drift:
 	python -m src.monitoring.drift
