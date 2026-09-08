@@ -1,0 +1,37 @@
+version: 2
+
+sources:
+  - name: raw_data
+    schema: raw
+    tables:
+      - name: telco_customers
+        description: "Raw customer churn data ingested directly from source."
+        columns:
+          - name: customer_id
+            tests:
+              - not_null
+              - unique
+
+models:
+  - name: stg_customers
+    description: "Cleaned and standardized customer records from raw ingestion."
+    columns:
+      - name: customer_id
+        description: "Primary key identifying each customer."
+        tests:
+          - unique
+          - not_null
+      - name: churn_label
+        description: "Binary churn target: 1 for churned, 0 for retained."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+      - name: tenure_months
+        description: "Number of months customer has been with company."
+        tests:
+          - not_null
+      - name: monthly_charges
+        description: "Monthly recurring charge in USD."
+        tests:
+          - not_null

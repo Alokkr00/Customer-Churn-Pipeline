@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: int_customer_features
+    description: "Customer features enriched with tenure cohorts, service bundles, and risk indices."
+    columns:
+      - name: customer_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: tenure_cohort
+        description: "Tenure binned into business cohorts."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['0-12_months', '13-24_months', '25-48_months', '49+_months']
+      - name: contract_risk_index
+        description: "1 = Low risk (Two year), 2 = Medium risk (One year), 3 = High risk (Month-to-month)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3]
+      - name: total_services_count
+        description: "Sum of active phone and add-on services."
+        tests:
+          - not_null

@@ -1,0 +1,68 @@
+.PHONY: help up down restart ps logs test lint format ingest dbt-run dbt-test train evaluate drift clean
+
+help:
+	@echo "Available commands:"
+	@echo "  make up          - Start all docker services (Postgres, MinIO, MLflow, Airflow)"
+	@echo "  make down        - Stop all docker services"
+	@echo "  make ps          - Show status of services"
+	@echo "  make logs        - Follow logs from all docker containers"
+	@echo "  make ingest      - Download dataset and ingest into raw postgres"
+	@echo "  make dbt-run     - Run dbt models (staging -> intermediate -> marts)"
+	@echo "  make dbt-test    - Run dbt data tests"
+	@echo "  make train       - Train churn models and log runs to MLflow"
+	@echo "  make evaluate    - Compare candidate model against production and promote"
+	@echo "  make drift       - Generate Evidently data drift report"
+	@echo "  make test        - Run unit tests with pytest"
+	@echo "  make lint        - Run ruff linter"
+	@echo "  make format      - Format code with black and isort"
+	@echo "  make clean       - Remove cache and compiled files"
+
+up:
+	docker compose up -d
+
+down:
+	docker compose down
+
+restart:
+	docker compose restart
+
+ps:
+	docker compose ps
+
+logs:
+	docker compose logs -f
+
+ingest:
+	python -m src.data.ingest
+
+dbt-run:
+	cd dbt && dbt run --profiles-dir .
+
+dbt-test:
+	cd dbt && dbt test --profiles-dir .
+
+train:
+	python -m src.training.train
+
+evaluate:
+	python -m src.training.evaluate
+
+drift:
+	python -m src.monitoring.drift
+
+test:
+	pytest tests/unit/ -v --cov=src
+
+lint:
+	ruff check src/ tests/
+	black --check src/ tests/
+	isort --check-only src/ tests/
+
+format:
+	black src/ tests/
+	isort src/ tests/
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+	rm -rf .pytest_cache .coverage htmlcov

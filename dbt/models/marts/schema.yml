@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: mart_churn_features
+    description: "Production-ready feature mart for churn model training and batch scoring."
+    columns:
+      - name: customer_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: churn_label
+        description: "Target column: 1 for churn, 0 for retained."
+        tests:
+          - not_null
+          - accepted_values:
+              values: [0, 1]
+      - name: contract_type
+        description: "Contract duration type."
+        tests:
+          - not_null
+      - name: monthly_charges
+        description: "Monthly charges amount."
+        tests:
+          - not_null
+      - name: tenure_months
+        description: "Customer tenure in months."
+        tests:
+          - not_null
