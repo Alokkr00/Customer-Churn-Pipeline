@@ -1,6 +1,6 @@
 # 🔄 Production Customer Churn Prediction & Retention Pipeline
 
-[![CI Checks](https://github.com/your-org/customer-churn-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/customer-churn-pipeline/actions)
+[![CI Checks](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![dbt](https://img.shields.io/badge/dbt-1.7-orange.svg)](https://www.getdbt.com/)
 [![MLflow](https://img.shields.io/badge/MLflow-2.10-blue)](https://mlflow.org/)
