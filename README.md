@@ -1,6 +1,9 @@
 # 🔄 End-to-End Customer Churn Prediction & Retention MLOps Pipeline
 
 [![CI Checks](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions)
+[![Retrain & Promotion](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions/workflows/train-and-promote.yml/badge.svg)](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions)
+[![Publish Serving Container](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions/workflows/deploy.yml/badge.svg)](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions)
+[![Docker Image: ghcr.io](https://img.shields.io/badge/GHCR-Serving%20Container-2496ED?logo=docker&logoColor=white)](https://github.com/Alokkr00/Customer-Churn-Pipeline/pkgs/container/customer-churn-pipeline%2Fserving)
 [![Python 3.11](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.31+-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io)
@@ -24,6 +27,7 @@ A production-grade, end-to-end Machine Learning Operations (**MLOps**) and Data 
 - [REST API Reference (FastAPI)](#-rest-api-reference-fastapi)
 - [Interactive Retention Hub (Streamlit)](#-interactive-retention-hub-streamlit)
 - [Model Governance & Promotion Gate](#-model-governance--promotion-gate)
+- [Continuous ML & Container Deployment (Phase 4)](#-continuous-ml--container-deployment-phase-4)
 - [Testing & Code Quality](#-testing--code-quality)
 - [Roadmap](#-roadmap)
 
@@ -126,10 +130,12 @@ flowchart TD
 customer-churn-pipeline/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                 # PR & push validation (ruff, black, pytest, dbt parse)
+│       ├── ci.yml                 # PR & push validation (ruff, black, pytest, dbt parse)
+│       ├── train-and-promote.yml  # Automated retraining & model promotion quality gate
+│       └── deploy.yml             # Build & publish serving container to GHCR
 ├── airflow/
 │   └── dags/
-│       └── daily_scoring.py       # Airflow DAG for daily 06:00 AM batch scoring
+│       └── daily_scoring.py       # Daily batch scoring + Slack spike webhook alert
 ├── dbt/
 │   ├── models/
 │   │   ├── staging/               # stg_customers.sql + schema.yml
@@ -160,9 +166,11 @@ customer-churn-pipeline/
 ├── streamlit_app/
 │   └── app.py                     # Streamlit Retention Dashboard & Simulator
 ├── tests/
-│   └── unit/                      # 20 unit tests covering all components
-├── docker-compose.yml             # Postgres, MinIO, MLflow, Airflow
-├── Makefile                       # Developer shortcuts
+│   └── unit/                      # 24 unit tests (data, features, models, alerts, API)
+├── Dockerfile                     # Multi-stage production container build for FastAPI
+├── .dockerignore                  # Container image build exclusion rules
+├── docker-compose.yml             # Postgres, MinIO, MLflow, Airflow local stack
+├── Makefile                       # Developer shortcuts (train, test, serve, docker)
 ├── requirements.txt               # Pinned dependencies
 ├── pyproject.toml                 # Package definition & tool configs
 └── README.md
@@ -311,6 +319,37 @@ else:
     retain_production_model()
 ```
 
+## 🚢 Continuous ML & Container Deployment (Phase 4)
+
+### 1. Automated Weekly Retraining & Promotion Pipeline
+GitHub Actions workflow [`.github/workflows/train-and-promote.yml`](.github/workflows/train-and-promote.yml) triggers automatically on a schedule (every Monday at 02:00 AM UTC) or on-demand via `workflow_dispatch`:
+1. Checks out repository and provisions Python 3.11 with cached pip wheels.
+2. Ingests the latest customer dataset and trains both Logistic Regression and LightGBM classifiers.
+3. Automatically executes the two-factor promotion gate ($\Delta\text{AUC} \ge 0.01$ and $\text{PSI} \le 0.10$).
+4. Generates an interactive Markdown summary directly in `$GITHUB_STEP_SUMMARY`.
+5. Archives and persists the production model binaries (`models/`) as a 30-day workflow artifact.
+
+### 2. Container Image Publishing to GHCR
+Workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) automatically triggers upon successful model promotion:
+- Uses a multi-stage production [`Dockerfile`](Dockerfile) (`python:3.11-slim`) with non-root security principles (`appuser`).
+- Builds and signs Docker images tagged with `latest`, commit SHA (`sha-<short-hash>`), and build date.
+- Pushes directly to the GitHub Container Registry (**GHCR**):
+  ```bash
+  # Pull production image
+  docker pull ghcr.io/alokkr00/customer-churn-pipeline/serving:latest
+
+  # Run standalone prediction service locally
+  docker run -d -p 8000:8000 --name churn-api ghcr.io/alokkr00/customer-churn-pipeline/serving:latest
+  ```
+
+### 3. Anomaly Alerts via Slack Block Kit & Webhooks
+The daily batch scoring pipeline in [`airflow/dags/daily_scoring.py`](airflow/dags/daily_scoring.py) continuously monitors churn vulnerability distribution:
+- If the high-risk customer ratio exceeds the business threshold (configurable via Airflow Variable `HIGH_RISK_THRESHOLD_PCT`, default `35.0%`), it dispatches an urgent Slack Block Kit notification containing:
+  - 🚨 High-risk volume and percentage metrics
+  - Churn SLA breach warning
+  - Direct 1-click CTA button opening the **Streamlit Retention Dashboard**
+- Gracefully falls back if webhooks are unconfigured, ensuring zero pipeline interruption.
+
 ---
 
 ## 🧪 Testing & Code Quality
@@ -318,7 +357,7 @@ else:
 Run tests and linters locally before submitting pull requests:
 
 ```bash
-# Run all 20 unit tests with coverage
+# Run all 24 unit tests with coverage
 make test
 
 # Check code linting with Ruff
@@ -328,12 +367,13 @@ make lint
 make format
 ```
 
-All 20 unit tests verify:
+All 24 unit tests verify:
 - Feature preprocessing and ColumnTransformer pipeline encoding.
 - Dynamic project root discovery and environment variable overrides.
 - Precision@K ranking logic and Population Stability Index (PSI).
-- Automated model promotion gate acceptance and rejection paths.
+- Automated model promotion gate acceptance, rejection, and decision caching.
 - Batch customer scoring and top risk driver explanations.
+- High-risk volume anomaly spike detection and Slack/HTTP webhook alerts.
 - FastAPI endpoints (`/health`, `/model-info`, `/predict`, `/predict-batch`, `/high-risk`).
 
 ---
@@ -343,5 +383,5 @@ All 20 unit tests verify:
 - [x] **Phase 1: Foundation** – Docker Compose (Postgres, MinIO, MLflow, Airflow), raw ingestion, dbt models, CI workflow.
 - [x] **Phase 2: Features & Training** – Feature engineering pipeline, LightGBM training, MLflow tracking, automated promotion gate, drift checks.
 - [x] **Phase 3: Scoring & Serving** – Daily batch Airflow DAG, FastAPI real-time/batch prediction endpoints, interactive Streamlit retention dashboard.
-- [ ] **Phase 4: Production Practices** – Automated GitHub Actions training trigger, Slack/email alerts on high-risk customer spikes, containerized serving.
+- [x] **Phase 4: Production Practices** – Automated GitHub Actions retraining trigger, Slack webhook alerts on high-risk spikes, multi-stage serving Docker container published to GHCR.
 - [ ] **Phase 5: Cloud Deployment** – Terraform IaC modules for AWS (ECS + RDS) or GCP (Cloud Run + Cloud SQL).

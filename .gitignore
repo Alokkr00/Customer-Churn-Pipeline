@@ -63,6 +63,7 @@ mlartifacts/
 models/*.pkl
 models/*.joblib
 models/*.onnx
+models/*.json
 
 # Data files & outputs
 data/raw/*

@@ -12,9 +12,11 @@ Runs daily at 06:00 AM UTC:
 import logging
 from datetime import datetime, timedelta
 
-from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
+
+from airflow import DAG
+from src.monitoring.alerts import send_spike_alert
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,8 @@ def task_batch_scoring():
 
 def task_check_high_risk_volume(**context):
     """Evaluate volume of high-risk customers and alert if anomaly threshold exceeded."""
+    import os
+
     ti = context["ti"]
     summary = ti.xcom_pull(task_ids="score_active_customers")
 
@@ -58,16 +62,33 @@ def task_check_high_risk_volume(**context):
 
     high_risk_pct = summary.get("high_risk_percentage", 0.0)
     high_risk_count = summary.get("high_risk_customers", 0)
+    total_count = summary.get("total_customers_scored", 0)
+
+    # Configurable threshold from Airflow Variable or env var
+    threshold_pct = 35.0
+    try:
+        from airflow.models import Variable
+
+        threshold_pct = float(Variable.get("HIGH_RISK_THRESHOLD_PCT", default_var="35.0"))
+    except Exception:
+        threshold_pct = float(os.getenv("HIGH_RISK_THRESHOLD_PCT", "35.0"))
 
     logger.info(
-        f"Daily Scored Check: {high_risk_count} customers in High Risk tier ({high_risk_pct}%)."
+        f"Daily Scored Check: {high_risk_count} customers in High Risk tier ({high_risk_pct}%). "
+        f"Threshold is {threshold_pct}%."
     )
 
     # Business SLA warning threshold
-    if high_risk_pct > 35.0:
+    if high_risk_pct > threshold_pct:
         logger.warning(
-            f"ALERT: High-risk customer volume spiked to {high_risk_pct}% (> 35% threshold)! "
-            f"Retention outreach trigger required."
+            f"ALERT: High-risk customer volume spiked to {high_risk_pct}% (> {threshold_pct}% threshold)! "
+            f"Triggering retention outreach notification."
+        )
+        send_spike_alert(
+            high_risk_count=high_risk_count,
+            total_count=total_count,
+            high_risk_pct=high_risk_pct,
+            threshold_pct=threshold_pct,
         )
 
 

@@ -4,6 +4,7 @@ Evaluates candidate models against active production models,
 checks performance deltas and drift thresholds, and promotes models in MLflow.
 """
 
+import json
 import logging
 import os
 from typing import Any, Dict, Optional
@@ -44,6 +45,21 @@ def load_candidate_model() -> Pipeline:
     return joblib.load(CANDIDATE_MODEL_PATH)
 
 
+def is_mlflow_available(tracking_uri: str) -> bool:
+    """Check if MLflow tracking server is reachable without blocking."""
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+    if not tracking_uri or not tracking_uri.startswith("http"):
+        return True
+    try:
+        import urllib.request
+
+        with urllib.request.urlopen(f"{tracking_uri}/health", timeout=0.5):
+            return True
+    except Exception:
+        return False
+
+
 def load_production_model() -> Optional[Pipeline]:
     """Load currently active production model from disk or MLflow."""
     # First check disk cache
@@ -51,17 +67,18 @@ def load_production_model() -> Optional[Pipeline]:
         logger.info(f"Loading active production model from local cache: {PROD_MODEL_PATH}")
         return joblib.load(PROD_MODEL_PATH)
 
-    # Attempt to load from MLflow Model Registry
-    try:
-        client = MlflowClient(tracking_uri=TRACKING_URI)
-        model_name = "churn_champion"
-        latest_prod = client.get_latest_versions(model_name, stages=["Production"])
-        if latest_prod:
-            prod_uri = f"models:/{model_name}/Production"
-            logger.info(f"Loading production model from MLflow registry: {prod_uri}")
-            return mlflow.sklearn.load_model(prod_uri)
-    except Exception as exc:
-        logger.info(f"No existing production model found in MLflow registry: {exc}")
+    # Attempt to load from MLflow Model Registry if server reachable
+    if is_mlflow_available(TRACKING_URI):
+        try:
+            client = MlflowClient(tracking_uri=TRACKING_URI)
+            model_name = "churn_champion"
+            latest_prod = client.get_latest_versions(model_name, stages=["Production"])
+            if latest_prod:
+                prod_uri = f"models:/{model_name}/Production"
+                logger.info(f"Loading production model from MLflow registry: {prod_uri}")
+                return mlflow.sklearn.load_model(prod_uri)
+        except Exception as exc:
+            logger.info(f"No existing production model found in MLflow registry: {exc}")
 
     return None
 
@@ -165,30 +182,40 @@ def evaluate_and_promote(
         joblib.dump(candidate, PROD_MODEL_PATH)
         logger.info(f"Production model cached to {PROD_MODEL_PATH}")
 
-        # Register in MLflow if active
-        try:
-            client = MlflowClient(tracking_uri=TRACKING_URI)
-            client.transition_model_version_stage(
-                name="churn_champion",
-                version="1",
-                stage="Production",
-                archive_existing_versions=True,
-            )
-        except Exception:
-            pass
+        # Register in MLflow if active and reachable
+        if is_mlflow_available(TRACKING_URI):
+            try:
+                client = MlflowClient(tracking_uri=TRACKING_URI)
+                client.transition_model_version_stage(
+                    name="churn_champion",
+                    version="1",
+                    stage="Production",
+                    archive_existing_versions=True,
+                )
+            except Exception as exc:
+                logger.info(f"MLflow stage transition skipped: {exc}")
     else:
         logger.info(f"KEEPING CURRENT PRODUCTION MODEL: {reason}")
 
     decision = {
-        "promoted": should_promote,
+        "promoted": bool(should_promote),
         "reason": reason,
-        "candidate_auc": candidate_auc,
-        "production_auc": prod_metrics["roc_auc"] if prod_metrics else None,
-        "auc_delta": auc_delta,
-        "drift_psi_score": drift_score,
+        "candidate_auc": float(candidate_auc),
+        "production_auc": float(prod_metrics["roc_auc"]) if prod_metrics else None,
+        "auc_delta": float(auc_delta) if auc_delta is not None else None,
+        "drift_psi_score": float(drift_score),
         "candidate_metrics": candidate_metrics,
         "production_metrics": prod_metrics,
     }
+
+    try:
+        MODELS_DIR.mkdir(parents=True, exist_ok=True)
+        decision_file = MODELS_DIR / "evaluation_decision.json"
+        with open(decision_file, "w") as f:
+            json.dump(decision, f, indent=2)
+        logger.info(f"Evaluation decision saved to {decision_file}")
+    except Exception as exc:
+        logger.warning(f"Could not persist evaluation decision json: {exc}")
 
     return decision
 
