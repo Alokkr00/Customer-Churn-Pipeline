@@ -7,6 +7,7 @@
 [![Docker Image: ghcr.io](https://img.shields.io/badge/GHCR-Serving%20Container-2496ED?logo=docker&logoColor=white)](https://github.com/Alokkr00/Customer-Churn-Pipeline/pkgs/container/customer-churn-pipeline%2Fserving)
 [![IaC: Terraform](https://img.shields.io/badge/IaC-Terraform%201.7+-844FBA.svg?logo=terraform&logoColor=white)](https://www.terraform.io/)
 [![Cloud: AWS](https://img.shields.io/badge/AWS-ECS%20%7C%20RDS%20%7C%20S3-FF9900.svg?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
+[![Cloud: OCI](https://img.shields.io/badge/Oracle%20Cloud-Always%20Free%20Ampere-F80000.svg?logo=oracle&logoColor=white)](https://cloud.oracle.com/)
 [![Python 3.11](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.31+-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io)
@@ -32,6 +33,7 @@ A production-grade, end-to-end Machine Learning Operations (**MLOps**) and Data 
 - [Model Governance & Promotion Gate](#model-governance--promotion-gate)
 - [Continuous ML & Container Deployment (Phase 4)](#continuous-ml--container-deployment-phase-4)
 - [Cloud Infrastructure & Terraform (Phase 5)](#cloud-infrastructure--terraform-phase-5)
+- [Oracle Cloud (OCI) Always Free Deployment](#oracle-cloud-oci-always-free-deployment)
 - [Testing & Code Quality](#testing--code-quality)
 - [Roadmap](#roadmap)
 
@@ -138,15 +140,10 @@ customer-churn-pipeline/
 │       ├── train-and-promote.yml  # Automated retraining & model promotion quality gate
 │       ├── deploy.yml             # Build & publish serving container to GHCR
 │       └── terraform.yml          # Terraform format and validate CI
-├── infra/                         # Production Terraform Infrastructure-as-Code (AWS)
-│   ├── modules/
-│   │   ├── networking/            # VPC, public/private subnets, NAT GW, security groups
-│   │   ├── database/              # RDS PostgreSQL 15, Secrets Manager credentials
-│   │   ├── storage/               # S3 MLflow artifact bucket, AES256 encryption
-│   │   └── serving/               # ECS Fargate, ALB, Target Groups, Auto Scaling
-│   ├── environments/
-│   │   ├── dev/                   # Dev environment configuration & tfvars
-│   │   └── prod/                  # Prod environment (multi-AZ, high availability)
+├── infra/                         # Multi-Cloud Infrastructure-as-Code (Terraform)
+│   ├── modules/                   # AWS Modules (networking, database, storage, serving)
+│   ├── environments/              # AWS Dev & Prod environments
+│   ├── oci/                       # Oracle Cloud (OCI) Always Free Terraform IaC
 │   └── README.md                  # Cloud architecture & deployment guide
 ├── airflow/
 │   └── dags/
@@ -159,9 +156,11 @@ customer-churn-pipeline/
 │   ├── dbt_project.yml
 │   └── profiles.yml
 ├── docs/
-│   └── demo_script.md             # 3-minute portfolio presentation walkthrough
+│   ├── demo_script.md             # 3-minute portfolio presentation walkthrough
+│   └── oci_deployment_guide.md    # Step-by-step 100% Free Forever deployment on Oracle Cloud
 ├── scripts/
-│   └── init_db.sql                # PostgreSQL init for raw, marts, and scoring schemas
+│   ├── init_db.sql                # PostgreSQL init for raw, marts, and scoring schemas
+│   └── oci_setup.sh               # Automated OCI VM bootstrap (Docker, compose, iptables)
 ├── src/
 │   ├── data/
 │   │   ├── ingest.py              # Raw ingestion to raw.telco_customers
@@ -185,10 +184,11 @@ customer-churn-pipeline/
 │   └── app.py                     # Streamlit Retention Dashboard & Simulator
 ├── tests/
 │   └── unit/                      # 24 unit tests (data, features, models, alerts, API)
-├── Dockerfile                     # Multi-stage production container build for FastAPI
+├── Dockerfile                     # Multi-stage production container build for FastAPI & Streamlit
 ├── .dockerignore                  # Container image build exclusion rules
 ├── docker-compose.yml             # Postgres, MinIO, MLflow, Airflow local stack
-├── Makefile                       # Developer shortcuts (train, test, serve, docker, tf)
+├── docker-compose.prod.yml        # Full production stack (adds serving + streamlit)
+├── Makefile                       # Developer shortcuts (train, test, serve, docker, tf, oci)
 ├── requirements.txt               # Pinned dependencies
 ├── pyproject.toml                 # Package definition & tool configs
 └── README.md
@@ -416,6 +416,31 @@ make tf-apply-dev
 
 # Teardown to prevent ongoing cloud costs
 make tf-destroy-dev
+```
+
+---
+
+## ☁️ Oracle Cloud (OCI) Always Free Deployment
+
+Deploy the entire production pipeline on **Oracle Cloud Infrastructure (OCI) Always Free Tier** with **$0/month cloud bills forever**:
+- Runs all 6 services simultaneously on an **Ampere A1 Flex** instance (**4 OCPUs, 24 GB RAM, 200 GB NVMe Storage**).
+- Automated host setup with Docker, Compose, and OS firewall unblocking via [`scripts/oci_setup.sh`](scripts/oci_setup.sh).
+- Infrastructure-as-Code with Terraform under [`infra/oci/`](infra/oci/).
+- Complete step-by-step walkthrough: 👉 **[Oracle Cloud Deployment Guide](docs/oci_deployment_guide.md)**.
+
+### Quick Start on OCI (1-Command Bootstrap)
+```bash
+# 1. Connect to your OCI Ubuntu instance
+ssh -i /path/to/key.pem ubuntu@<YOUR_OCI_PUBLIC_IP>
+
+# 2. Run automated host preparation (installs Docker & configures firewall)
+curl -fsSL https://raw.githubusercontent.com/Alokkr00/Customer-Churn-Pipeline/main/scripts/oci_setup.sh | bash
+newgrp docker
+
+# 3. Clone and launch the production pipeline
+git clone https://github.com/Alokkr00/Customer-Churn-Pipeline.git
+cd Customer-Churn-Pipeline
+make oci-up
 ```
 
 ---

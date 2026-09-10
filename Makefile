@@ -1,9 +1,12 @@
-.PHONY: help up down restart ps logs test lint format ingest dbt-run dbt-test train evaluate retrain drift score serve dashboard docker-build docker-run tf-init tf-validate tf-plan-dev tf-apply-dev tf-destroy-dev clean
+.PHONY: help up down restart ps logs test lint format ingest dbt-run dbt-test train evaluate retrain drift score serve dashboard docker-build docker-run tf-init tf-validate tf-plan-dev tf-apply-dev tf-destroy-dev tf-validate-oci oci-up oci-down oci-logs clean
 
 help:
 	@echo "Available commands:"
-	@echo "  make up          - Start all docker services (Postgres, MinIO, MLflow, Airflow)"
-	@echo "  make down        - Stop all docker services"
+	@echo "  make up          - Start core docker services (Postgres, MinIO, MLflow, Airflow)"
+	@echo "  make down        - Stop core docker services"
+	@echo "  make oci-up      - Start full production stack on OCI (includes serving + streamlit)"
+	@echo "  make oci-down    - Stop full production stack on OCI"
+	@echo "  make oci-logs    - Follow production container logs"
 	@echo "  make ps          - Show status of services"
 	@echo "  make logs        - Follow logs from all docker containers"
 	@echo "  make ingest      - Download dataset and ingest into raw postgres"
@@ -18,7 +21,7 @@ help:
 	@echo "  make docker-build- Build standalone FastAPI serving Docker container"
 	@echo "  make docker-run  - Run standalone FastAPI serving container on port 8000"
 	@echo "  make tf-init     - Initialize Terraform providers in dev"
-	@echo "  make tf-validate - Validate Terraform syntax across modules"
+	@echo "  make tf-validate - Validate Terraform syntax across AWS and OCI modules"
 	@echo "  make tf-plan-dev - Review proposed AWS infrastructure changes"
 	@echo "  make tf-apply-dev- Provision AWS infrastructure (ALB, ECS Fargate, RDS, S3)"
 	@echo "  make tf-destroy-dev - Teardown AWS infrastructure to prevent costs"
@@ -83,6 +86,19 @@ tf-init:
 tf-validate:
 	cd infra/environments/dev && terraform validate
 	cd infra/environments/prod && terraform validate
+	cd infra/oci && terraform validate
+
+tf-validate-oci:
+	cd infra/oci && terraform validate
+
+oci-up:
+	docker compose -f docker-compose.prod.yml up -d
+
+oci-down:
+	docker compose -f docker-compose.prod.yml down
+
+oci-logs:
+	docker compose -f docker-compose.prod.yml logs -f
 
 tf-plan-dev:
 	cd infra/environments/dev && terraform plan

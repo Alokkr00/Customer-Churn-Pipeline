@@ -1,0 +1,33 @@
+# ==============================================================================
+# Oracle Cloud Infrastructure (OCI) Terraform Variables Example
+#
+# Copy this file to `terraform.tfvars` and replace with your OCI account details:
+#   cp terraform.tfvars.example terraform.tfvars
+#
+# How to get your OCI credentials:
+# 1. Tenancy OCID: OCI Console -> Profile (Avatar) -> Tenancy -> Copy OCID
+# 2. User OCID: OCI Console -> Profile (Avatar) -> My Profile -> Copy OCID
+# 3. Compartment OCID: Identity & Security -> Compartments -> Copy OCID (or use Tenancy OCID for root)
+# 4. API Key & Fingerprint:
+#    - In OCI Console: User Profile -> API Keys -> Add API Key -> Generate API Key Pair
+#    - Download Private Key (save to ~/.oci/oci_api_key.pem)
+#    - Copy the Fingerprint displayed in the dialog
+# ==============================================================================
+
+tenancy_ocid     = "ocid1.tenancy.oc1..exampleuniqueid12345"
+user_ocid        = "ocid1.user.oc1..exampleuniqueid12345"
+compartment_ocid = "ocid1.compartment.oc1..exampleuniqueid12345"
+fingerprint      = "xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"
+private_key_path = "~/.oci/oci_api_key.pem"
+region           = "us-ashburn-1" # e.g. us-ashburn-1, us-phoenix-1, ap-mumbai-1, eu-frankfurt-1
+
+# Your public SSH key for connecting to the VM (cat ~/.ssh/id_ed25519.pub or ~/.ssh/id_rsa.pub)
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG... your_email@example.com"
+
+# Always Free Tier Ampere A1 configuration (4 OCPUs, 24 GB RAM free forever)
+# Alternatively, for x86_64 micro: shape="VM.Standard.E2.1.Micro"
+instance_shape          = "VM.Standard.A1.Flex"
+ocpus                   = 4
+memory_in_gbs           = 24
+boot_volume_size_in_gbs = 100
+environment             = "prod"

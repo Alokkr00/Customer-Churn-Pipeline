@@ -29,9 +29,10 @@ RUN groupadd -r appuser && useradd -r -g appuser appuser
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-# Copy source application, models, and configs
+# Copy source application, models, UI, and configs
 COPY src/ /app/src/
 COPY models/ /app/models/
+COPY streamlit_app/ /app/streamlit_app/
 COPY pyproject.toml /app/
 
 RUN chown -R appuser:appuser /app

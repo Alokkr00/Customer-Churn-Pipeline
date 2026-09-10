@@ -39,6 +39,12 @@ jobs:
           terraform init -backend=false
           terraform validate
 
+      - name: Validate OCI Environment
+        run: |
+          cd infra/oci
+          terraform init -backend=false
+          terraform validate
+
       - name: Post Terraform CI Summary
         run: |
           echo "## ☁️ Terraform Infrastructure CI" >> $GITHUB_STEP_SUMMARY
@@ -46,7 +52,8 @@ jobs:
           echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| **Terraform Format (\`fmt\`)** | Passed ✅ |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Dev Environment Validation** | Passed ✅ (\`infra/environments/dev\`) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Prod Environment Validation** | Passed ✅ (\`infra/environments/prod\`) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **AWS Dev Validation** | Passed ✅ (\`infra/environments/dev\`) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **AWS Prod Validation** | Passed ✅ (\`infra/environments/prod\`) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **OCI Validation** | Passed ✅ (\`infra/oci\`) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "AWS Modules verified: \`networking\`, \`storage\` (S3), \`database\` (RDS Postgres 15), \`serving\` (ECS Fargate + ALB)." >> $GITHUB_STEP_SUMMARY
+          echo "Verified multi-cloud IaC: AWS (ECS Fargate + RDS + S3) and Oracle Cloud (OCI Always Free Ampere A1 + VCN)." >> $GITHUB_STEP_SUMMARY

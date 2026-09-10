@@ -99,3 +99,22 @@ When finished testing or presenting a portfolio demo, destroy resources to avoid
 ```bash
 terraform destroy -auto-approve
 ```
+
+---
+
+## ☁️ Oracle Cloud Infrastructure (OCI) Always Free Module
+
+For a **100% free forever** hosting option with zero monthly cloud bills:
+- Located under: [`infra/oci/`](oci/)
+- Architecture: Always Free Ampere A1 instance (**4 OCPUs, 24 GB RAM, 100 GB NVMe**) running the unified production Docker stack.
+- Automated host setup with Docker and OS-level `iptables` rules via cloud-init.
+- Full setup walkthrough: 👉 **[docs/oci_deployment_guide.md](../docs/oci_deployment_guide.md)**
+
+```bash
+cd infra/oci
+cp terraform.tfvars.example terraform.tfvars
+# Fill in your OCI tenancy OCIDs and API keys
+terraform init
+terraform apply -auto-approve
+```
+
