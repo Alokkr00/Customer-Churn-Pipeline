@@ -1,0 +1,52 @@
+name: Terraform Infrastructure CI
+
+on:
+  push:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/terraform.yml'
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/terraform.yml'
+  workflow_dispatch:
+
+jobs:
+  terraform-ci:
+    name: Terraform Format & Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive infra/
+
+      - name: Validate Dev Environment
+        run: |
+          cd infra/environments/dev
+          terraform init -backend=false
+          terraform validate
+
+      - name: Validate Prod Environment
+        run: |
+          cd infra/environments/prod
+          terraform init -backend=false
+          terraform validate
+
+      - name: Post Terraform CI Summary
+        run: |
+          echo "## ☁️ Terraform Infrastructure CI" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Terraform Format (\`fmt\`)** | Passed ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Dev Environment Validation** | Passed ✅ (\`infra/environments/dev\`) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Prod Environment Validation** | Passed ✅ (\`infra/environments/prod\`) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "AWS Modules verified: \`networking\`, \`storage\` (S3), \`database\` (RDS Postgres 15), \`serving\` (ECS Fargate + ALB)." >> $GITHUB_STEP_SUMMARY

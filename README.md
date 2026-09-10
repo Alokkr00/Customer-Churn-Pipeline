@@ -3,7 +3,10 @@
 [![CI Checks](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions)
 [![Retrain & Promotion](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions/workflows/train-and-promote.yml/badge.svg)](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions)
 [![Publish Serving Container](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions/workflows/deploy.yml/badge.svg)](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions)
+[![Terraform CI](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions/workflows/terraform.yml/badge.svg)](https://github.com/Alokkr00/Customer-Churn-Pipeline/actions)
 [![Docker Image: ghcr.io](https://img.shields.io/badge/GHCR-Serving%20Container-2496ED?logo=docker&logoColor=white)](https://github.com/Alokkr00/Customer-Churn-Pipeline/pkgs/container/customer-churn-pipeline%2Fserving)
+[![IaC: Terraform](https://img.shields.io/badge/IaC-Terraform%201.7+-844FBA.svg?logo=terraform&logoColor=white)](https://www.terraform.io/)
+[![Cloud: AWS](https://img.shields.io/badge/AWS-ECS%20%7C%20RDS%20%7C%20S3-FF9900.svg?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
 [![Python 3.11](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.31+-FF4B4B.svg?logo=streamlit&logoColor=white)](https://streamlit.io)
@@ -28,6 +31,7 @@ A production-grade, end-to-end Machine Learning Operations (**MLOps**) and Data 
 - [Interactive Retention Hub (Streamlit)](#-interactive-retention-hub-streamlit)
 - [Model Governance & Promotion Gate](#-model-governance--promotion-gate)
 - [Continuous ML & Container Deployment (Phase 4)](#-continuous-ml--container-deployment-phase-4)
+- [Cloud Infrastructure & Terraform (Phase 5)](#-cloud-infrastructure--terraform-phase-5)
 - [Testing & Code Quality](#-testing--code-quality)
 - [Roadmap](#-roadmap)
 
@@ -132,7 +136,18 @@ customer-churn-pipeline/
 │   └── workflows/
 │       ├── ci.yml                 # PR & push validation (ruff, black, pytest, dbt parse)
 │       ├── train-and-promote.yml  # Automated retraining & model promotion quality gate
-│       └── deploy.yml             # Build & publish serving container to GHCR
+│       ├── deploy.yml             # Build & publish serving container to GHCR
+│       └── terraform.yml          # Terraform format and validate CI
+├── infra/                         # Production Terraform Infrastructure-as-Code (AWS)
+│   ├── modules/
+│   │   ├── networking/            # VPC, public/private subnets, NAT GW, security groups
+│   │   ├── database/              # RDS PostgreSQL 15, Secrets Manager credentials
+│   │   ├── storage/               # S3 MLflow artifact bucket, AES256 encryption
+│   │   └── serving/               # ECS Fargate, ALB, Target Groups, Auto Scaling
+│   ├── environments/
+│   │   ├── dev/                   # Dev environment configuration & tfvars
+│   │   └── prod/                  # Prod environment (multi-AZ, high availability)
+│   └── README.md                  # Cloud architecture & deployment guide
 ├── airflow/
 │   └── dags/
 │       └── daily_scoring.py       # Daily batch scoring + Slack spike webhook alert
@@ -143,6 +158,8 @@ customer-churn-pipeline/
 │   │   └── marts/                 # mart_churn_features.sql + schema.yml
 │   ├── dbt_project.yml
 │   └── profiles.yml
+├── docs/
+│   └── demo_script.md             # 3-minute portfolio presentation walkthrough
 ├── scripts/
 │   └── init_db.sql                # PostgreSQL init for raw, marts, and scoring schemas
 ├── src/
@@ -160,6 +177,7 @@ customer-churn-pipeline/
 │   │   ├── main.py                # FastAPI real-time REST API
 │   │   └── schemas.py             # Pydantic v2 schemas
 │   ├── monitoring/
+│   │   ├── alerts.py              # Anomaly detection & Slack Block Kit notifications
 │   │   └── drift.py               # Evidently & statistical drift monitoring
 │   └── utils/
 │       └── paths.py               # Dynamic platform-agnostic directory resolution
@@ -170,7 +188,7 @@ customer-churn-pipeline/
 ├── Dockerfile                     # Multi-stage production container build for FastAPI
 ├── .dockerignore                  # Container image build exclusion rules
 ├── docker-compose.yml             # Postgres, MinIO, MLflow, Airflow local stack
-├── Makefile                       # Developer shortcuts (train, test, serve, docker)
+├── Makefile                       # Developer shortcuts (train, test, serve, docker, tf)
 ├── requirements.txt               # Pinned dependencies
 ├── pyproject.toml                 # Package definition & tool configs
 └── README.md
@@ -352,6 +370,56 @@ The daily batch scoring pipeline in [`airflow/dags/daily_scoring.py`](airflow/da
 
 ---
 
+## ☁️ Cloud Infrastructure & Terraform (Phase 5)
+
+Complete Infrastructure-as-Code (IaC) configuration located under [`infra/`](infra/) enables 1-command deployment of the serving architecture to **Amazon Web Services (AWS)**.
+
+### Architecture Overview
+```text
+Internet
+   │
+   ▼
+[ Application Load Balancer (ALB) ] (Public Subnets: 10.0.1.0/24, 10.0.2.0/24)
+   │
+   │  Port 8000
+   ▼
+[ ECS Fargate Service ] (Private Subnets: 10.0.10.0/24, 10.0.20.0/24)
+   │  Image: ghcr.io/alokkr00/customer-churn-pipeline/serving:latest
+   │  Target Tracking Auto-scaling (CPU > 70%)
+   │
+   ├──► [ Amazon S3 ] (MLflow Model Artifacts with AES256 Encryption)
+   └──► [ Amazon RDS PostgreSQL 15 ] (Private Subnets, Port 5432)
+```
+
+### Modular Structure
+* **[`infra/modules/networking`](infra/modules/networking/)**: Custom VPC (`10.0.0.0/16`), 2 public subnets, 2 private subnets, Internet Gateway, NAT Gateway, route tables, and granular Security Groups.
+* **[`infra/modules/storage`](infra/modules/storage/)**: Versioned, AES256-encrypted S3 bucket for MLflow models with strict public access blocks.
+* **[`infra/modules/database`](infra/modules/database/)**: RDS PostgreSQL 15 instance with automatic DB subnet grouping and credentials stored in AWS Secrets Manager.
+* **[`infra/modules/serving`](infra/modules/serving/)**: ECS Cluster, CloudWatch log groups, IAM roles, Fargate Task Definition, ALB with `/health` checks, and CPU target tracking auto-scaling.
+
+### Multi-Environment Strategy & Cost Breakdown
+
+| Environment | RDS Instance | Multi-AZ | Fargate Task Size | Task Replicas | Est. Monthly Cost |
+|---|---|---|---|---|---|
+| **Dev** | `db.t3.micro` | Disabled | 0.25 vCPU / 512 MB | 1 (min 1, max 2) | ~$18 - $28 |
+| **Prod** | `db.t3.small` | Enabled | 0.50 vCPU / 1024 MB | 2 (min 2, max 5) | ~$65 - $95 |
+
+### 1-Command Deployment & Teardown
+```bash
+# Initialize and validate
+make tf-init
+make tf-validate
+
+# Review plan & deploy to AWS
+make tf-plan-dev
+make tf-apply-dev
+
+# Teardown to prevent ongoing cloud costs
+make tf-destroy-dev
+```
+
+---
+
 ## 🧪 Testing & Code Quality
 
 Run tests and linters locally before submitting pull requests:
@@ -384,4 +452,4 @@ All 24 unit tests verify:
 - [x] **Phase 2: Features & Training** – Feature engineering pipeline, LightGBM training, MLflow tracking, automated promotion gate, drift checks.
 - [x] **Phase 3: Scoring & Serving** – Daily batch Airflow DAG, FastAPI real-time/batch prediction endpoints, interactive Streamlit retention dashboard.
 - [x] **Phase 4: Production Practices** – Automated GitHub Actions retraining trigger, Slack webhook alerts on high-risk spikes, multi-stage serving Docker container published to GHCR.
-- [ ] **Phase 5: Cloud Deployment** – Terraform IaC modules for AWS (ECS + RDS) or GCP (Cloud Run + Cloud SQL).
+- [x] **Phase 5: Cloud Deployment** – Terraform IaC modules for AWS (ECS Fargate + RDS Postgres 15 + S3 + ALB), multi-environment dev/prod configurations, and automated Terraform CI.

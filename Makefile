@@ -1,4 +1,4 @@
-.PHONY: help up down restart ps logs test lint format ingest dbt-run dbt-test train evaluate retrain drift score serve dashboard docker-build docker-run clean
+.PHONY: help up down restart ps logs test lint format ingest dbt-run dbt-test train evaluate retrain drift score serve dashboard docker-build docker-run tf-init tf-validate tf-plan-dev tf-apply-dev tf-destroy-dev clean
 
 help:
 	@echo "Available commands:"
@@ -17,6 +17,11 @@ help:
 	@echo "  make dashboard   - Launch Streamlit interactive retention dashboard"
 	@echo "  make docker-build- Build standalone FastAPI serving Docker container"
 	@echo "  make docker-run  - Run standalone FastAPI serving container on port 8000"
+	@echo "  make tf-init     - Initialize Terraform providers in dev"
+	@echo "  make tf-validate - Validate Terraform syntax across modules"
+	@echo "  make tf-plan-dev - Review proposed AWS infrastructure changes"
+	@echo "  make tf-apply-dev- Provision AWS infrastructure (ALB, ECS Fargate, RDS, S3)"
+	@echo "  make tf-destroy-dev - Teardown AWS infrastructure to prevent costs"
 	@echo "  make drift       - Generate Evidently data drift report"
 	@echo "  make test        - Run unit tests with pytest"
 	@echo "  make lint        - Run ruff linter"
@@ -71,6 +76,22 @@ docker-build:
 
 docker-run:
 	docker run -d -p 8000:8000 --name churn_serving churn-serving:latest
+
+tf-init:
+	cd infra/environments/dev && terraform init
+
+tf-validate:
+	cd infra/environments/dev && terraform validate
+	cd infra/environments/prod && terraform validate
+
+tf-plan-dev:
+	cd infra/environments/dev && terraform plan
+
+tf-apply-dev:
+	cd infra/environments/dev && terraform apply -auto-approve
+
+tf-destroy-dev:
+	cd infra/environments/dev && terraform destroy -auto-approve
 
 drift:
 	python -m src.monitoring.drift
