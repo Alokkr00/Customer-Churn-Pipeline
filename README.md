@@ -21,19 +21,19 @@ A production-grade, end-to-end Machine Learning Operations (**MLOps**) and Data 
 ---
 
 ## 📑 Table of Contents
-- [Business Problem & ROI](#-business-problem--roi)
-- [System Architecture](#-system-architecture)
-- [Key Features](#-key-features)
-- [Tech Stack](#-tech-stack)
-- [Project Layout](#-project-layout)
-- [Quickstart Guide](#-quickstart-guide)
-- [REST API Reference (FastAPI)](#-rest-api-reference-fastapi)
-- [Interactive Retention Hub (Streamlit)](#-interactive-retention-hub-streamlit)
-- [Model Governance & Promotion Gate](#-model-governance--promotion-gate)
-- [Continuous ML & Container Deployment (Phase 4)](#-continuous-ml--container-deployment-phase-4)
-- [Cloud Infrastructure & Terraform (Phase 5)](#-cloud-infrastructure--terraform-phase-5)
-- [Testing & Code Quality](#-testing--code-quality)
-- [Roadmap](#-roadmap)
+- [Business Problem & ROI](#business-problem--roi)
+- [System Architecture](#system-architecture)
+- [Key Features](#key-features)
+- [Tech Stack](#tech-stack)
+- [Project Layout](#project-layout)
+- [Quickstart Guide](#quickstart-guide)
+- [REST API Reference (FastAPI)](#rest-api-reference-fastapi)
+- [Interactive Retention Hub (Streamlit)](#interactive-retention-hub-streamlit)
+- [Model Governance & Promotion Gate](#model-governance--promotion-gate)
+- [Continuous ML & Container Deployment (Phase 4)](#continuous-ml--container-deployment-phase-4)
+- [Cloud Infrastructure & Terraform (Phase 5)](#cloud-infrastructure--terraform-phase-5)
+- [Testing & Code Quality](#testing--code-quality)
+- [Roadmap](#roadmap)
 
 ---
 
